@@ -1,41 +1,30 @@
 const express = require("express");
 const routerApi = require('./routes/rutas');
+const setupSwagger = require('./swagger');
+const bodyParse = require('body-parser');
+const cors = require('cors');
+const mongoose = require('mongoose');
+require('dotenv').config();
+
+const { logErrors, errorHandler } = require('./middlewares/errorHandler');
+
 const app = express();
-const port = 3000;
+const mongoUri = process.env.MONGO_URI;
+const port = process.env.PORT;
 
-app.use(express.json());
+app.use(cors());
+app.use(bodyParse.json());
 
+setupSwagger(app);
 routerApi(app);
+
+app.use(logErrors);
+app.use(errorHandler);
+
+mongoose.connect(mongoUri)
+    .then(() => console.log('Conexion a MongoDB exitosa'))
+    .catch(err => console.error('No se pudo conectar a MongoDB', err));
 
 app.listen(port, () => {
   console.log('My server is working on: ' + port);
 });
-
-// app.get("/", (req, res) => {
-//   res.send('Hola mundo');
-// });
-
-// app.get("/nuevaruta", (req, res) => {
-//   res.send('Hola mundo desde nueva ruta');
-// });
-
-// app.get("/categories/:categoryId/products/:productId", (req, res) => {
-//   const { categoryId, productId } = req.params;
-//   res.json({
-//     categoryId,
-//     productId
-//   })
-// });
-
-//http://localhost:3000/users?username=Leo&lastname=Pozos
-// app.get("/users", (req, res) => {
-//   const { username, lastname } = req.query;
-//   if (username && lastname) {
-//     res.json({
-//       username,
-//       lastname
-//     });
-//   } else {
-//     res.send("No hay parametros query");
-//   }
-// })

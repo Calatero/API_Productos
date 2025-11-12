@@ -1,74 +1,60 @@
 const faker = require('faker');
 const data = require('../extras/dataStore');
+const categoryModel = require('../models/Category');
+const productModel = require('../models/Product');
 
 class categoriesService{
-  constructor(){
-    this.categories = data.categories;
-    this.generate();
-  }
+  constructor(){}
 
-  generate(){
-    const limit = 10;
-      for(let index = 0; index < limit; index++){
-        this.categories.push({
-          id: index + 1,
-          categoryName: faker.commerce.department(),
-          description: faker.commerce.productDescription(),
-          active: faker.datatype.boolean()
-        })
-      }
-  }
-
-  create(categoryName, description, active){
-    const newCategory = {
-      id: this.categories.length + 1,
+  async create(categoryName, description, active){
+    const newCategory = new categoryModel({
       categoryName,
       description,
       active
-    }
-    this.categories.push(newCategory);
+    });
+    
+    await newCategory.save();
     return newCategory;
   }
 
-  getAll(){
-    return this.categories;
+  async getAll(){
+    const categories = await categoryModel.find();
+    return categories;
   }
 
-  getById(id){
-    const category = this.categories.find(c => c.id == id);
-    if(category){
-      return category;
-    }else{
-      return "No hay categoria registrada con ese id";
+  async getById(id){
+    const category = await categoryModel.findById(id);
+    if(category == null){
+      throw new Error("No hay categoria registrada con ese id");
     }
+    return category;
   }
 
-  update(id, categoryName, description, active){
-    const index = this.categories.findIndex(item => item.id == id);
-    if(index == -1){
+  async update(id, changes){
+    const category = await categoryModel.findById(id);
+    if(!category){
       throw new Error('Category Not Found');
     }
-    const category = this.categories[index];
 
-    const updateCategory = {
-      ...category,
-      categoryName: categoryName ?? category.categoryName,
-      description: description ?? category.description,
-      active: active ?? category.active
-    };
-
-    this.categories[index] = updateCategory;
+    const updateCategory = await categoryModel.findByIdAndUpdate(id, changes, { new: true });
     return updateCategory;
   }
 
-  delete(id){
-    const hasProducts = data.products.some(p => p.categoryId == id);
-    if(hasProducts){
-      return "No puede eliminar esta categoria porque tiene productos asociados."
+  async delete(id){
+    const category = await categoryModel.findById(id);
+    if(!category){
+      throw new Error('Category Not Found');
     }
-    const categoryDelete = this.categories.findIndex(c => c.id == id);
-    this.categories.splice(categoryDelete, 1);
-    return "Categoria eliminada";
+
+    const productCount = await productModel.countDocuments({ categoryId: id });
+    if(productCount > 0){
+      return "No puede eliminar esta categoria porque tiene productos asociados."
+    };
+
+    await categoryModel.findByIdAndDelete(id);
+    return { message: 'Category Deleted' };
+    
+        
   }
 }
 

@@ -1,71 +1,51 @@
 const faker = require('faker');
 const data = require('../extras/dataStore');
+const userModel = require('../models/User');
 
 class usersService{
-  constructor(){
-    this.users = data.users;
-    this.generate();
-  }
+  constructor(){}
 
-  generate(){
-    const limit = 10;
-    for(let index = 0; index < limit; index++){
-      this.users.push({
-        id: index + 1,
-        name: faker.name.findName(),
-        username: faker.internet.userName(),
-        password: faker.internet.password()
-      })
-    }
-  }
-
-  create(name, username, password){
-    const newUser = {
-      id: this.users.length + 1,
+  async create(name, username, password){
+    const newUser = new userModel({
       name,
       username,
       password
-    }
-    this.users.push(newUser);
+    });
+    
+    await newUser.save();
     return newUser;
   }
 
-  getAll(){
-    return this.users;
+  async getAll(){
+    const users = await userModel.find();
+    return users;
   }
 
-  getById(id){
-    const user = this.users.find(u => u.id == id);
-    if(user){
-      return user;
-    }else{
-      return "No hay usuario registrado con ese id";
+  async getById(id){
+    const user = await userModel.findById(id);
+    if(user == null){
+      throw new Error("No hay usuario registrada con ese id.");
     }
+    return user;
   }
 
-  update(id, name, username, password){
-    const index = this.users.findIndex(item => item.id == id);
-    if(index == -1){
+  async update(id, changes){
+    const user = await userModel.findById(id);
+    if(!user){
       throw new Error('User Not Found');
     }
-    const user = this.users[index];
 
-    const updateUser = {
-      ...user,
-      name: name ?? user.name,
-      username: username ?? user.username,
-      password: password ?? user.password
-    };
-
-    this.users[index] = updateUser;
-
+    const updateUser = await userModel.findByIdAndUpdate(id, changes, { new: true });
     return updateUser;
   }
 
-  delete(id){
-    const userDelete = this.users.findIndex(u => u.id == id);
-    this.users.splice(userDelete, 1);
-    return "Usuario eliminado";
+  async delete(id){
+    const user = await userModel.findById(id);
+    if(!user){
+      throw new Error('User Not Found');
+    }
+    await userModel.findByIdAndDelete(id);
+    return { message: "Usuario eliminado" };
   }
 }
 

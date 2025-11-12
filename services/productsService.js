@@ -1,44 +1,29 @@
-const faker = require('faker');
-
-const data = require('../extras/dataStore');
 const serviceBrands = require('../services/brandsService');
 const serviceCategories = require('../services/categoriesService');
+const productModel = require('../models/Product');
+const mongoose = require('mongoose');
 
 class productsService{
-  constructor(){
-    this.products = data.products;
-    this.generate();
-  }
+  constructor(){}
 
-  generate(){
-    const limit = 10;
-    for(let index = 0; index < limit; index++){
-      this.products.push({
-        id: index + 1,
-        image: faker.image.imageUrl(),
-        productName: faker.commerce.productName(),
-        description: faker.commerce.productDescription(),
-        price: parseInt(faker.commerce.price(), 10),
-        stock: faker.datatype.number({ min: 0, max: 100 }),
-        categoryId: faker.datatype.number({ min: 1, max: 10 }),
-        brandId: faker.datatype.number({ min: 1, max: 10 })
-      });
-    };
-  };
-
-  create(image, productName, description, price, stock, categoryId, brandId){
-    const brandExist = serviceBrands.getById(brandId);
-    if(typeof brandExist === "string"){
+  async create(image, productName, description, price, stock, categoryId, brandId){
+    if (!mongoose.Types.ObjectId.isValid(brandId)) {
+      throw new Error('El ID de la marca no tiene un formato válido.');
+    }
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+      throw new Error('El ID de la categoría no tiene un formato válido.');
+    }
+    const brandExist = await serviceBrands.getById(brandId);
+    if(!brandExist){
       return "No existe una marca registrada con ese id";
     }
 
-    const categoryExist = serviceCategories.getById(categoryId);
-    if(typeof categoryExist === "string"){
+    const categoryExist = await serviceCategories.getById(categoryId);
+    if(!categoryExist){
       return "No existe una categoria registrada con ese id";
     }
 
-    const newProduct = {
-      id: this.products.length + 1,
+    const newProduct = new productModel({
       image,
       productName,
       description,
@@ -46,80 +31,91 @@ class productsService{
       stock,
       categoryId,
       brandId
-    }
-    this.products.push(newProduct);
+    });
+    await newProduct.save();
     return newProduct;
   }
 
-  getAll(){
-    return this.products;
+  async getAll(){
+    const products = await productModel.find();
+    return products;
   }
 
-  getById(id){
-    const product = this.products.find(p => p.id == id);
-    if (product) {
-      return product;
-    }else{
-      return "No hay producto con ese Id.";
+  async getById(id){
+    const product = await productModel.findById(id);
+    if(product == null){
+      throw new Error("No hay producto con ese Id.");
     }
+    return product;
   }
 
-  getProductsByCategoryId(id){
+  async getProductsByCategoryId(id){
     const productsByCategory = this.products.filter(p => p.categoryId == id);
     if(productsByCategory.length > 0){
       return productsByCategory;
     }else{
-      return "No hay productos registrados con el id de esa categoria";
+      throw new Error("No hay productos registrados con el id de esa categoria");
     }
   }
 
-  getProductsByBrandId(id){
+  async getProductsByBrandId(id){
     const productsByBrand = this.products.filter(p => p.brandId == id);
     if(productsByBrand.length > 0){
       return productsByBrand;
     }else{
-      return "No hay productos registrados con el id de esa marca";
+      throw new Error("No hay productos registrados con el id de esa marca");
     }
   }
 
-  update(id, image, productName, description, price, stock, categoryId, brandId){
-    const index = this.products.findIndex(item => item.id == id);
+  async update(id, changes){
+    const index = await productModel.findById(id);
     if(index === -1){
       throw new Error('Product Not Found');
     }
-    const product = this.products[index];
 
-    const brandExist = serviceBrands.getById(brandId);
+    if (!mongoose.Types.ObjectId.isValid(brandId)) {
+      throw new Error('El ID de la marca no tiene un formato válido.');
+    }
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+      throw new Error('El ID de la categoría no tiene un formato válido.');
+    }
+
+    const brandExist = await serviceBrands.getById(brandId);
     if(typeof brandExist === "string"){
       return "No existe una marca registrada con ese id";
     }
 
-    const categoryExist = serviceCategories.getById(categoryId);
+    const categoryExist = await serviceCategories.getById(categoryId);
     if(typeof categoryExist === "string"){
       return "No existe una categoria registrada con ese id";
     }
 
-    const updateProduct = {
-      ...product,
-      image: image ?? product.image,
-      productName: productName ?? product.productName,
-      description: description ?? product.description,
-      price: price ?? product.price,
-      stock: stock ?? product.stock,
-      categoryId: categoryId ?? product.categoryId,
-      brandId: brandId ?? product.brandId
-    };
+    const updateProduct = await productModel.findByIdAndUpdate(id, changes, { new: true });
 
     this.products[index] = updateProduct;
 
     return updateProduct;
   }
 
-  delete(id){
-    const productDelete = this.products.findIndex(p => p.id == id);
-    this.products.splice(productDelete, 1);
-    return "Producto eliminado";
+  async delete(id){
+    const product = await productModel.findById(id);
+    if(!product){
+      throw new Error('Product Not Found');
+    };
+
+    await productModel.findByIdAndDelete(id);
+    return { message: "Producto eliminada" };
   }
 }
 
 module.exports = new productsService();
+
+
+
+
+/*
+1. Procesar Solicitudes. Permiten manupular las solicitudes de entrada anstes de que lleguen a los manejadores de rutas (endpoints).
+2. Respuesta: Pueden modificar las respuestas antes de que envien de vuelta al cliente.
+3. Encadenar tareas: Permiten encadenar una serie de funciones que se ejecutan en orden, cada una de las cuales puede realizar una tarea especifica.
+4. Control de flujo: Permite determinar si se debe continuar con el siguiente
+*/
