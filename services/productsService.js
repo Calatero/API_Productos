@@ -50,7 +50,10 @@ class productsService{
   }
 
   async getProductsByCategoryId(id){
-    const productsByCategory = this.products.filter(p => p.categoryId == id);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new Error('El ID de la categoría no tiene un formato válido.');
+    }
+    const productsByCategory = await productModel.find({ categoryId: id });
     if(productsByCategory.length > 0){
       return productsByCategory;
     }else{
@@ -59,7 +62,10 @@ class productsService{
   }
 
   async getProductsByBrandId(id){
-    const productsByBrand = this.products.filter(p => p.brandId == id);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new Error('El ID de la marca no tiene un formato válido.');
+    }
+    const productsByBrand = await productModel.find({ brandId: id });
     if(productsByBrand.length > 0){
       return productsByBrand;
     }else{
@@ -67,34 +73,35 @@ class productsService{
     }
   }
 
-  async update(id, changes){
-    const index = await productModel.findById(id);
-    if(index === -1){
-      throw new Error('Product Not Found');
+  async update(id, changes) {
+    const product = await productModel.findById(id);
+    if (!product) {
+        throw new Error('Product Not Found');
     }
-
-    if (!mongoose.Types.ObjectId.isValid(brandId)) {
-      throw new Error('El ID de la marca no tiene un formato válido.');
+    if (changes.brandId) {
+        if (!mongoose.Types.ObjectId.isValid(changes.brandId)) {
+            throw new Error('El ID de la marca no tiene un formato válido.');
+        }
+        const brandExist = await serviceBrands.getById(changes.brandId);
+        if (!brandExist) {
+            throw new Error("No existe una marca registrada con ese id");
+        }
     }
-    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
-      throw new Error('El ID de la categoría no tiene un formato válido.');
+    if (changes.categoryId) {
+        if (!mongoose.Types.ObjectId.isValid(changes.categoryId)) {
+            throw new Error('El ID de la categoría no tiene un formato válido.');
+        }
+        const categoryExist = await serviceCategories.getById(changes.categoryId);
+        if (!categoryExist) {
+            throw new Error("No existe una categoria registrada con ese id");
+        }
     }
-
-    const brandExist = await serviceBrands.getById(brandId);
-    if(typeof brandExist === "string"){
-      return "No existe una marca registrada con ese id";
-    }
-
-    const categoryExist = await serviceCategories.getById(categoryId);
-    if(typeof categoryExist === "string"){
-      return "No existe una categoria registrada con ese id";
-    }
-
-    const updateProduct = await productModel.findByIdAndUpdate(id, changes, { new: true });
-
-    this.products[index] = updateProduct;
-
-    return updateProduct;
+    const updatedProduct = await productModel.findByIdAndUpdate(
+        id,
+        changes,
+        { new: true }
+    );
+    return updatedProduct;
   }
 
   async delete(id){

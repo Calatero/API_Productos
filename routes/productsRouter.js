@@ -313,11 +313,11 @@ router.post('/', async (req, res) => {
  *                 type: integer
  *                 example: 25
  *               categoryId:
- *                 type: integer
- *                 example: 3
+ *                 type: string
+ *                 example: "3"
  *               brandId:
- *                 type: integer
- *                 example: 6
+ *                 type: string
+ *                 example: "6"
  *     responses:
  *       200:
  *         description: Producto actualizado exitosamente O No existe una marca registrada con ese id o No existe una categoria registrada con ese id
