@@ -11,8 +11,12 @@ const swaggerDefinition = {
   },
   servers:[
     {
-      url: 'http://localhost:3000/',
-      description: 'Servidor de desarrollo'
+      url: 'https://apiproductos-production-fc60.up.railway.app',
+      description: 'Railway Production Server',
+    },
+    {
+      url: 'http://localhost:3000',
+      description: 'Local development server',
     }
   ]
 };
